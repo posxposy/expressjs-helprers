@@ -1,0 +1,13 @@
+{
+	"name": "expressjs-helpers",
+	"url" : "https://github.com/dmitryhryppa/expressjs-helprers",
+	"license": "MIT",
+	"tags": ["nodejs", "expressjs"],
+	"description": "Utils and helper classes for express.js apps",
+	"version": "0.0.1",
+	"classPath": "src",
+	"releasenote": "early stage",
+	"contributors": ["dmitryhryppa"],
+	"dependencies": {
+	}
+}
