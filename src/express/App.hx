@@ -58,7 +58,9 @@ class App {
 
 			next();
 		});
-		app.listen(this.options.port, () -> cb(Success(app)));
+
+		app.listen(this.options.port, () -> cb(Success(app)))
+			.on("error", e -> cb(Failure("Express JS cannot be initialized. Original error: \n" + Std.string(e))));
 	}
 }
 
