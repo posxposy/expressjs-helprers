@@ -1,5 +1,6 @@
 package express;
 
+import js.Syntax;
 import haxe.ds.StringMap;
 import better.Result;
 #if js
@@ -15,15 +16,18 @@ class App {
 	}
 
 	public function start(cb:(result:Result<String>) -> Void):Void {
-		startExpressJS(result -> switch result {
-			case Success(app):
-				cb(Success('Server has been started on port ${this.options.port}.'));
-			case Failure(errorMessage):
-				cb(Failure(errorMessage));
-		});
+		app.listen(this.options.port, () -> cb(Success('Server has been started on port ${this.options.port}.')))
+			.on("error", e -> cb(Failure("Express JS cannot be initialized. Original error: \n" + Std.string(e))));
+	}
+
+	public function useRouter(router:IRouter):Void {
+		app.use(router.__router);
 	}
 
 	function new(o:AppOptions) {
+		#if debug
+		js.Node.require("source-map-support").install();
+		#end
 		if (o.defaultHeaders == null) {
 			o.defaultHeaders = [
 				"Content-Type" => "application/json",
@@ -34,11 +38,8 @@ class App {
 		}
 
 		this.options = o;
-	}
 
-	function startExpressJS(cb:(result:Result<ExpressApp>) -> Void):Void {
 		final options = {limit: "50mb", extended: true};
-
 		app = Express.app();
 		app.use(Express.getStatic());
 		app.use(Express.urlencoded(options));
@@ -58,9 +59,6 @@ class App {
 
 			next();
 		});
-
-		app.listen(this.options.port, () -> cb(Success(app)))
-			.on("error", e -> cb(Failure("Express JS cannot be initialized. Original error: \n" + Std.string(e))));
 	}
 }
 
