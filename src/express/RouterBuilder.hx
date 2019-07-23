@@ -31,7 +31,7 @@ class RouterBuilder {
 					if (field.meta != null) {
 						for (meta in field.meta) {
 							if (meta.params.length > 0) {
-								if (meta.name == Get || meta.name == Post) {
+								if (meta.name == Get || meta.name == Post || meta.name == Put || meta.name == Delete) {
 									final pack:Array<String> = ["js", "npm", "express"];
 									final prevArgs:Array<FunctionArg> = f.args;
 
@@ -203,4 +203,6 @@ class RouterBuilder {
 private enum abstract MetaName(String) from String to String {
 	var Get = ":get";
 	var Post = ":post";
+	var Put = ":put";
+	var Delete = ":delete";
 }
