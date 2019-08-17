@@ -7,7 +7,10 @@ import haxe.macro.ComplexTypeTools;
 import haxe.macro.Type;
 import haxe.macro.Context;
 import haxe.macro.Expr;
-import haxe.macro.Type;
+
+using haxe.macro.ExprTools;
+using haxe.macro.MacroStringTools;
+using haxe.macro.TypeTools;
 
 class RouterBuilder {
 	public static function build():Array<Field> {
@@ -46,90 +49,99 @@ class RouterBuilder {
 										type: TPath({pack: pack, name: "EResp"})
 									});
 
-									switch meta.params[0].expr {
-										case EConst(c):
-											switch (c) {
-												case CString(s):
-													routeFuncs.push({
-														name: field.name,
-														method: meta.name,
-														path: s
-													});
-												case _:
-											}
-										case _:
-									}
+									if (prevArgs.length > 0) {
+										switch meta.params[0].expr {
+											case EConst(CString(s)):
+												routeFuncs.push({
+													name: field.name,
+													method: meta.name,
+													path: s
+												});
+											case _:
+										}
+										function buildVar(arg:FunctionArg) {
+											final stdMethod:Null<String> = switch (arg.type) {
+												case TPath(p):
+													switch (p.name) {
+														case "String": "string";
+														case "Float": "parseFloat";
+														case "Int": "parseInt";
+														case _: null;
+													}
+												case _: null;
+											};
 
-									function buildVar(arg:FunctionArg) {
-										final stdMethod:Null<String> = switch (arg.type) {
-											case TPath(p):
-												switch (p.name) {
-													case "String": "string";
-													case "Float": "parseFloat";
-													case "Int": "parseInt";
-													case _: null;
+											final queryExprField:Expr = ["req", meta.name == Get ? "query" : "body", arg.name].toFieldExpr(pos);
+											if (stdMethod == null) {
+												return {
+													name: arg.name,
+													type: macro:Dynamic,
+													expr: queryExprField,
+													isFinal: true
 												}
-											case _: null;
-										};
+											}
 
-										if (stdMethod == null) {
 											return {
 												name: arg.name,
-												type: macro:Dynamic,
+												type: arg.type,
 												expr: {
-													expr: EField({
-														expr: EField({
-															expr: EConst(CIdent("req")),
-															pos: pos
-														}, meta.name == Get ? "query" : "body"),
-														pos: pos
-													}, arg.name),
+													expr: ECall(["Std", stdMethod].toFieldExpr(), [queryExprField]),
 													pos: pos
 												},
 												isFinal: true
 											}
-										}
+										};
 
-										return {
-											name: arg.name,
-											type: arg.type,
-											expr: {
-												expr: ECall({
-													expr: EField({
-														expr: EConst(CIdent("Std")),
-														pos: pos
-													}, stdMethod),
+										final varsExpr:Expr = {
+											expr: EVars([
+												for (arg in prevArgs)
+													buildVar(arg)
+											]),
+											pos: pos
+										};
+
+										final badRequestExpr:Expr = {
+											expr: ECall(["trace"].toFieldExpr(), [
+												{
+													expr: EConst(CString("Kek")),
 													pos: pos
-												}, [
-														{
-															expr: EField({
-																expr: EField({
-																	expr: EConst(CIdent("req")),
-																	pos: pos
-																}, meta.name == Get ? "query" : "body"),
-																pos: pos
-															}, arg.name),
-															pos: pos
-														}
-													]),
-												pos: pos
-											},
-											isFinal: true
+												}
+											]),
+											pos: pos
+										};
+
+										function buildCheckExpressions():Expr {
+											var prevExpr:Null<Expr> = null;
+											for (arg in prevArgs) {
+												final queryExprField:Expr = ["req", meta.name == Get ? "query" : "body", arg.name].toFieldExpr(pos);
+												final currentExpr:Expr = {
+													expr: EBinop(OpEq, queryExprField, {
+														expr: EConst(CIdent("null")),
+														pos: pos
+													}),
+													pos: pos
+												};
+												if (prevExpr == null) {
+													prevExpr = currentExpr;
+												} else {
+													prevExpr = {
+														expr: EBinop(OpBoolAnd, prevExpr, currentExpr),
+														pos: pos
+													};
+												}
+											}
+
+											return prevExpr;
 										}
-									};
 
-									final varsExpr:Expr = {
-										expr: EVars([
-											for (arg in prevArgs)
-												buildVar(arg)
-										]),
-										pos: pos
-									};
-
-									f.expr = macro @:mergeBlock {
-										${varsExpr};
-										${f.expr};
-									};
+										f.expr = {
+											expr: EIf(buildCheckExpressions(), badRequestExpr, macro @:mergeBlock {
+												${varsExpr};
+												${f.expr};
+											}),
+											pos: pos
+										};
+									}
 								}
 							}
 						}
