@@ -75,7 +75,7 @@ class RouterBuilder {
 											if (stdMethod == null) {
 												return {
 													name: arg.name,
-													type: macro:Dynamic,
+													type: arg.type,
 													expr: queryExprField,
 													isFinal: true
 												}
@@ -101,9 +101,13 @@ class RouterBuilder {
 										};
 
 										final badRequestExpr:Expr = {
-											expr: ECall(["trace"].toFieldExpr(), [
+											expr: ECall(["res", "send"].toFieldExpr(), [
 												{
-													expr: EConst(CString("Kek")),
+													expr: EConst(CInt("400")),
+													pos: pos
+												},
+												{
+													expr: EConst(CString("Bad request.")),
 													pos: pos
 												}
 											]),
