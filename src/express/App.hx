@@ -1,5 +1,6 @@
 package express;
 
+import js.Node;
 import js.Syntax;
 import haxe.ds.StringMap;
 import better.Result;
@@ -7,7 +8,7 @@ import better.Result;
 import js.npm.express.*;
 #end
 
-class App {
+final class App {
 	final options:AppOptions;
 	var app:ExpressApp;
 
@@ -15,13 +16,17 @@ class App {
 		return new App(o);
 	}
 
-	public function start(cb:(result:Result<String>) -> Void):Void {
+	public inline function start(cb:(result:Result<String>) -> Void):Void {
 		app.listen(this.options.port, () -> cb(Success('Server has been started on port ${this.options.port}.')))
 			.on("error", e -> cb(Failure("Express JS cannot be initialized. Original error: \n" + Std.string(e))));
 	}
 
-	public function useRouter(router:IRouter):Void {
+	public inline function useRouter(router:IRouter):Void {
 		app.use(router.__router);
+	}
+
+	public inline function use(any:Any) {
+		app.use(any);
 	}
 
 	function new(o:AppOptions) {
@@ -29,12 +34,7 @@ class App {
 		js.Node.require("source-map-support").install();
 		#end
 		if (o.defaultHeaders == null) {
-			o.defaultHeaders = [
-				"Content-Type" => "application/json",
-				"Access-Control-Allow-Origin" => "*",
-				"Access-Control-Allow-Methods" => "*",
-				"Access-Control-Allow-Headers" => "*"
-			];
+			o.defaultHeaders = ["Content-Type" => "application/json"];
 		}
 
 		this.options = o;
