@@ -12,7 +12,7 @@ using haxe.macro.ExprTools;
 using haxe.macro.MacroStringTools;
 using haxe.macro.TypeTools;
 
-class RouterBuilder {
+final class RouterBuilder {
 	public static function build():Array<Field> {
 		final pos:Position = Context.currentPos();
 		final fields:Array<Field> = Context.getBuildFields();
@@ -59,7 +59,7 @@ class RouterBuilder {
 												});
 											case _:
 										}
-										function buildVar(arg:FunctionArg) {
+										function buildVar(arg:FunctionArg):Var {
 											final stdMethod:Null<String> = switch (arg.type) {
 												case TPath(p):
 													switch (p.name) {
@@ -72,23 +72,31 @@ class RouterBuilder {
 											};
 
 											final queryExprField:Expr = ["req", meta.name == Get ? "query" : "body", arg.name].toFieldExpr(pos);
-											if (stdMethod == null) {
-												return {
-													name: arg.name,
-													type: arg.type,
-													expr: queryExprField,
-													isFinal: true
-												}
-											}
-
-											return {
-												name: arg.name,
-												type: arg.type,
-												expr: {
-													expr: ECall(["Std", stdMethod].toFieldExpr(), [queryExprField]),
-													pos: pos
-												},
-												isFinal: true
+											return switch stdMethod {
+												case null: {
+														name: arg.name,
+														type: arg.type,
+														expr: queryExprField,
+														isFinal: true
+													}
+												case "parseInt": {
+														name: arg.name,
+														type: TPath({pack: [], name: "Null", params: [TPType(arg.type)]}),
+														expr: {
+															expr: ECall(["Std", stdMethod].toFieldExpr(), [queryExprField]),
+															pos: pos
+														},
+														isFinal: true
+													}
+												case _: {
+														name: arg.name,
+														type: arg.type,
+														expr: {
+															expr: ECall(["Std", stdMethod].toFieldExpr(), [queryExprField]),
+															pos: pos
+														},
+														isFinal: true
+													}
 											}
 										};
 
@@ -100,19 +108,8 @@ class RouterBuilder {
 											pos: pos
 										};
 
-										final badRequestExpr:Expr = {
-											expr: ECall(["res", "send"].toFieldExpr(), [
-												{
-													expr: EConst(CInt("400")),
-													pos: pos
-												},
-												{
-													expr: EConst(CString("Bad request.")),
-													pos: pos
-												}
-											]),
-											pos: pos
-										};
+										final badRequestExpr:Expr = e(ECall(["res", "send"].toFieldExpr(),
+											[e(EConst(CInt("400")), pos), e(EConst(CString("Bad request.")), pos)]), pos);
 
 										function buildCheckExpressions():Expr {
 											var prevExpr:Null<Expr> = null;
@@ -188,8 +185,8 @@ class RouterBuilder {
 							pos: pos
 						};
 						f.expr = macro @:mergeBlock {
-							$varsExpr;
 							${f.expr};
+							$varsExpr;
 						};
 					}
 				default:
@@ -213,6 +210,13 @@ class RouterBuilder {
 			});
 		}
 		return fields;
+	}
+
+	private static inline function e(exprDef:ExprDef, pos:Position):Expr {
+		return {
+			expr: exprDef,
+			pos: pos
+		};
 	}
 }
 
