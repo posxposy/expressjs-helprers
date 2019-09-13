@@ -8,6 +8,7 @@ import better.Result;
 import js.npm.express.*;
 #end
 
+@:nullSafety
 final class App {
 	final options:AppOptions;
 	var app:ExpressApp;
@@ -25,14 +26,11 @@ final class App {
 		app.use(router.__router);
 	}
 
-	public inline function use(any:Any) {
+	public inline function useMiddleware(any:Any) {
 		app.use(any);
 	}
 
 	function new(o:AppOptions) {
-		#if debug
-		js.Node.require("source-map-support").install();
-		#end
 		if (o.defaultHeaders == null) {
 			o.defaultHeaders = ["Content-Type" => "application/json"];
 		}
