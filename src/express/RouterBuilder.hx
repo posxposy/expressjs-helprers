@@ -49,16 +49,17 @@ final class RouterBuilder {
 										type: TPath({pack: pack, name: "EResp"})
 									});
 
+									switch meta.params[0].expr {
+										case EConst(CString(s)):
+											routeFuncs.push({
+												name: field.name,
+												method: meta.name,
+												path: s
+											});
+										case _:
+									}
+
 									if (prevArgs.length > 0) {
-										switch meta.params[0].expr {
-											case EConst(CString(s)):
-												routeFuncs.push({
-													name: field.name,
-													method: meta.name,
-													path: s
-												});
-											case _:
-										}
 										function buildVar(arg:FunctionArg):Var {
 											final stdMethod:Null<String> = switch (arg.type) {
 												case TPath(p):
