@@ -153,62 +153,65 @@ final class RouterBuilder {
 			}
 		}
 
+		var contructor:Null<Function> = null;
 		for (field in fields) {
-			var f:Null<Function> = switch field.kind {
-				case FFun(f): field.name == "new" ? f : null;
-				default: null;
+			switch field.kind {
+				case FFun(f):
+					if (field.name == "new") {
+						contructor = f;
+					};
+				default:
 			};
-			if (f == null) {
-				f = {
-					args: [],
-					expr: {
-						expr: EBlock([]),
-						pos: pos
-					},
-					params: [],
-					ret: null
-				};
-				fields.push({
-					name: "new",
-					access: [APublic],
-					pos: pos,
-					kind: FFun(f)
-				});
-			}
-			if (f != null) {
-				final constrExpr = f.expr;
-				final varsExpr:Expr = {
-					expr: EBlock([
-						for (route in routeFuncs)
-							{
-								expr: ECall({
-									expr: EField({
-										expr: EConst(CIdent("__router")),
-										pos: pos
-									}, StringTools.replace(route.method, ":", "")),
-									pos: pos
-								}, [
-										{expr: EConst(CString(route.path)), pos: pos},
-										{
-											expr: EField({
-												expr: EConst(CIdent("this")),
-												pos: pos
-											}, route.name),
-											pos: pos
-										}
-									]),
-								pos: pos
-							}
-					]),
-					pos: pos
-				};
-				f.expr = macro @:mergeBlock {
-					${f.expr};
-					$varsExpr;
-				};
-				break;
-			}
 		}
+
+		if (contructor == null) {
+			contructor = {
+				args: [],
+				expr: {
+					expr: EBlock([]),
+					pos: pos
+				},
+				params: [],
+				ret: null
+			};
+			fields.push({
+				name: "new",
+				access: [APublic],
+				pos: pos,
+				kind: FFun(contructor)
+			});
+		}
+
+		final constrExpr = contructor.expr;
+		final varsExpr:Expr = {
+			expr: EBlock([
+				for (route in routeFuncs)
+					{
+						expr: ECall({
+							expr: EField({
+								expr: EConst(CIdent("__router")),
+								pos: pos
+							}, StringTools.replace(route.method, ":", "")),
+							pos: pos
+						}, [
+								{expr: EConst(CString(route.path)), pos: pos},
+								{
+									expr: EField({
+										expr: EConst(CIdent("this")),
+										pos: pos
+									}, route.name),
+									pos: pos
+								}
+							]),
+						pos: pos
+					}
+			]),
+			pos: pos
+		};
+		contructor.expr = macro @:mergeBlock {
+			${contructor.expr};
+			$varsExpr;
+		};
 
 		return fields;
 	}
