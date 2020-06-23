@@ -1,9 +1,9 @@
 package express;
 
+import better.Result;
+import haxe.ds.StringMap;
 import js.Node;
 import js.Syntax;
-import haxe.ds.StringMap;
-import better.Result;
 #if js
 import js.npm.express.*;
 #end
@@ -26,7 +26,7 @@ final class App {
 		app.use(router.__router);
 	}
 
-	public inline function useMiddleware(any:Any) {
+	public inline function useMiddleware(any:Any):Void {
 		app.use(any);
 	}
 
