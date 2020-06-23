@@ -1,12 +1,12 @@
 package express;
 
 import haxe.ds.StringMap;
-import haxe.macro.PositionTools;
-import haxe.macro.TypeTools;
 import haxe.macro.ComplexTypeTools;
-import haxe.macro.Type;
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.PositionTools;
+import haxe.macro.Type;
+import haxe.macro.TypeTools;
 
 using haxe.macro.ExprTools;
 using haxe.macro.MacroStringTools;
@@ -72,6 +72,9 @@ final class RouterBuilder {
 												case _: null;
 											};
 
+											inline function e(expr:ExprDef):Expr
+												return {expr: expr, pos: pos};
+
 											final queryExprField:Expr = ["req", meta.name == Get ? "query" : "body", arg.name].toFieldExpr(pos);
 											return switch stdMethod {
 												case null: {
@@ -80,18 +83,19 @@ final class RouterBuilder {
 														expr: queryExprField,
 														isFinal: true
 													}
-												case "parseInt": {
+												case "string": {
 														name: arg.name,
 														type: TPath({pack: [], name: "Null", params: [TPType(arg.type)]}),
 														expr: {
-															expr: ECall(["Std", stdMethod].toFieldExpr(), [queryExprField]),
+															expr: ETernary(e(EBinop(OpEq, queryExprField, macro null)), macro null,
+																e(ECall(["Std", stdMethod].toFieldExpr(), [queryExprField]))),
 															pos: pos
 														},
 														isFinal: true
 													}
 												case _: {
 														name: arg.name,
-														type: arg.type,
+														type: TPath({pack: [], name: "Null", params: [TPType(arg.type)]}),
 														expr: {
 															expr: ECall(["Std", stdMethod].toFieldExpr(), [queryExprField]),
 															pos: pos
@@ -194,15 +198,15 @@ final class RouterBuilder {
 							}, StringTools.replace(route.method, ":", "")),
 							pos: pos
 						}, [
-								{expr: EConst(CString(route.path)), pos: pos},
-								{
-									expr: EField({
-										expr: EConst(CIdent("this")),
-										pos: pos
-									}, route.name),
+							{expr: EConst(CString(route.path)), pos: pos},
+							{
+								expr: EField({
+									expr: EConst(CIdent("this")),
 									pos: pos
-								}
-							]),
+								}, route.name),
+								pos: pos
+							}
+						]),
 						pos: pos
 					}
 			]),
