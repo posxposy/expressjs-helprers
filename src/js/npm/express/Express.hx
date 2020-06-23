@@ -7,6 +7,6 @@ extern class Express {
 	public static function json(options:{extended:Bool, limit:String}):Dynamic;
 	public static function urlencoded(options:{extended:Bool, limit:String}):Dynamic;
 	public static inline function getStatic():Dynamic {
-		return untyped __js__('(require("express")).static(__dirname + "/public")');
+		return Syntax.code('(require("express")).static(__dirname + "/public")');
 	}
 }
